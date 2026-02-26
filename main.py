@@ -42,7 +42,7 @@ async def run_pipeline():
         return
 
     # Step 3: Humanize content into LinkedIn posts
-    humanizer = HumanizerAgent(api_key=settings.ANTHROPIC_API_KEY)
+    humanizer = HumanizerAgent(api_key=settings.GROQ_API_KEY)
     posts = []
     for item in raw_contents:
         logger.info(f"✍️  Humanizing: {item['topic']['title']}")
