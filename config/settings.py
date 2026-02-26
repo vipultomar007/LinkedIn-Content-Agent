@@ -10,8 +10,7 @@ load_dotenv()
 
 
 class Settings:
-    # Anthropic / Claude API
-    ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
+    GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
 
     # Email Configuration (Gmail recommended)
     SMTP_HOST: str = os.getenv("SMTP_HOST", "smtp.gmail.com")
