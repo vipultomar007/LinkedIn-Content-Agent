@@ -1,12 +1,12 @@
 """
 Humanizer Agent
-Uses Claude (Anthropic) to transform raw scraped content into
+Uses Groq (free) to transform raw scraped content into
 a genuine, engaging LinkedIn post that sounds like YOU — not AI.
 """
 
 import logging
 from typing import Dict
-import anthropic
+import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -28,17 +28,16 @@ You write like a real person talking to a peer, not a content marketer.
 
 class HumanizerAgent:
     def __init__(self, api_key: str):
-        self.client = anthropic.Anthropic(api_key=api_key)
+        self.api_key = api_key
 
     async def humanize(self, topic: Dict, raw_content: str) -> Dict:
-        """Convert raw scraped content into a LinkedIn post."""
         hashtags = " ".join(topic.get("hashtags", []))
 
         user_prompt = f"""
 Topic: {topic['title']}
 Category: {topic['category']}
 
-Here is reference content I scraped from the web:
+Here is reference content scraped from the web:
 ---
 {raw_content[:3000]}
 ---
@@ -50,19 +49,31 @@ Write a LinkedIn post about this topic.
 """
 
         try:
-            message = self.client.messages.create(
-                model="claude-sonnet-4-20250514",
-                max_tokens=1000,
-                system=SYSTEM_PROMPT,
-                messages=[{"role": "user", "content": user_prompt}],
-            )
-            post_text = message.content[0].text.strip()
-            return {
-                "topic": topic["title"],
-                "category": topic["category"],
-                "post": post_text,
-                "hashtags": topic.get("hashtags", []),
-            }
+            async with httpx.AsyncClient(timeout=30) as client:
+                response = await client.post(
+                    "https://api.groq.com/openai/v1/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {self.api_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "model": "llama-3.3-70b-versatile",
+                        "messages": [
+                            {"role": "system", "content": SYSTEM_PROMPT},
+                            {"role": "user", "content": user_prompt},
+                        ],
+                        "max_tokens": 1000,
+                        "temperature": 0.8,
+                    },
+                )
+                response.raise_for_status()
+                post_text = response.json()["choices"][0]["message"]["content"].strip()
+                return {
+                    "topic": topic["title"],
+                    "category": topic["category"],
+                    "post": post_text,
+                    "hashtags": topic.get("hashtags", []),
+                }
         except Exception as e:
             logger.error(f"Humanizer failed for {topic['title']}: {e}")
             return {
